@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク管理アプリ - Eisenhower Matrix</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 左側: タスク入力・編集フォーム -->
+        <div class="left-panel">
+            <h2>タスク管理</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-name">タスク名 <span class="required">*</span></label>
+                    <input type="text" id="task-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-deadline">期限 <span class="required">*</span></label>
+                    <input type="date" id="task-deadline" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-registration">登録日</label>
+                    <input type="date" id="task-registration" readonly>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="task-important">
+                        重要
+                    </label>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="task-urgent">
+                        緊急
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="task-details">詳細</label>
+                    <textarea id="task-details" rows="5"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" id="save-btn">保存</button>
+                    <button type="button" id="cancel-btn" style="display: none;">キャンセル</button>
+                    <button type="button" id="clear-btn">クリア</button>
+                </div>
+                
+                <input type="hidden" id="task-id">
+            </form>
+            
+            <div class="sort-options">
+                <h3>表示順</h3>
+                <select id="sort-select">
+                    <option value="deadline-asc">期限が近い順</option>
+                    <option value="registration-asc">登録日が古い順</option>
+                    <option value="registration-desc">登録日が新しい順</option>
+                </select>
+            </div>
+            
+            <div class="google-sheets-config">
+                <h3>Google Sheets設定</h3>
+                <div class="form-group">
+                    <label for="sheet-id">スプレッドシートID</label>
+                    <input type="text" id="sheet-id" placeholder="スプレッドシートIDを入力">
+                </div>
+                <div class="form-group">
+                    <label for="api-key">APIキー</label>
+                    <input type="password" id="api-key" placeholder="Google Sheets APIキーを入力">
+                </div>
+                <button type="button" id="save-config-btn">設定を保存</button>
+                <button type="button" id="sync-btn">同期</button>
+            </div>
+        </div>
+        
+        <!-- 右側: Eisenhowerマトリックス (4象限) -->
+        <div class="right-panel">
+            <div class="matrix">
+                <!-- 緊急かつ重要 (左上) -->
+                <div class="quadrant urgent-important">
+                    <h3>緊急 & 重要</h3>
+                    <div class="task-list" id="urgent-important"></div>
+                </div>
+                
+                <!-- 緊急だが重要ではない (右上) -->
+                <div class="quadrant urgent-not-important">
+                    <h3>緊急 & 重要でない</h3>
+                    <div class="task-list" id="urgent-not-important"></div>
+                </div>
+                
+                <!-- 重要だが緊急ではない (左下) -->
+                <div class="quadrant not-urgent-important">
+                    <h3>緊急でない & 重要</h3>
+                    <div class="task-list" id="not-urgent-important"></div>
+                </div>
+                
+                <!-- 緊急でも重要でもない (右下) -->
+                <div class="quadrant not-urgent-not-important">
+                    <h3>緊急でない & 重要でない</h3>
+                    <div class="task-list" id="not-urgent-not-important"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
