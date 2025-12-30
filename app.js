@@ -194,7 +194,7 @@ class TaskApp {
     
     handleCheckboxChange(taskId, checked) {
         if (checked) {
-            // チェックされた - 3秒後にアーカイブ
+            // チェックされた場合 - 3秒後にアーカイブ処理を実行
             const timer = setTimeout(() => {
                 this.archiveTask(taskId);
                 this.deleteTimers.delete(taskId);
