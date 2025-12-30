@@ -17,6 +17,7 @@ class TaskApp {
         this.loadConfigFromLocalStorage();
         this.setupEventListeners();
         this.setTodayAsRegistrationDate();
+        this.setCurrentYearAsDeadline();
         
         // Google Sheetsからデータを読み込む
         await this.loadFromGoogleSheets();
@@ -82,6 +83,12 @@ class TaskApp {
         document.getElementById('task-registration').value = today;
     }
     
+    setCurrentYearAsDeadline() {
+        const currentYear = new Date().getFullYear();
+        const deadline = `${currentYear}-01-01`;
+        document.getElementById('task-deadline').value = deadline;
+    }
+    
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substring(2);
     }
@@ -132,6 +139,7 @@ class TaskApp {
     clearForm() {
         document.getElementById('task-form').reset();
         this.setTodayAsRegistrationDate();
+        this.setCurrentYearAsDeadline();
         this.editingTaskId = null;
         document.getElementById('task-id').value = '';
         document.getElementById('cancel-btn').style.display = 'none';
