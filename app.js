@@ -162,6 +162,21 @@ class TaskApp {
         document.querySelector('.left-panel').scrollTo({ top: 0, behavior: 'smooth' });
     }
     
+    async archiveTask(taskId) {
+        // Google Sheetsのアーカイブへ移動
+        const success = await this.archiveTaskToGoogleSheets(taskId);
+        
+        if (success) {
+            this.tasks = this.tasks.filter(t => t.id !== taskId);
+            this.renderAllTasks();
+            
+            // 編集中のタスクがアーカイブされた場合
+            if (this.editingTaskId === taskId) {
+                this.clearForm();
+            }
+        }
+    }
+    
     async deleteTask(taskId) {
         // Google Sheetsから削除
         const success = await this.deleteTaskFromGoogleSheets(taskId);
@@ -179,9 +194,9 @@ class TaskApp {
     
     handleCheckboxChange(taskId, checked) {
         if (checked) {
-            // チェックされた - 3秒後に削除
+            // チェックされた場合 - 3秒後にアーカイブ処理を実行
             const timer = setTimeout(() => {
-                this.deleteTask(taskId);
+                this.archiveTask(taskId);
                 this.deleteTimers.delete(taskId);
             }, 3000);
             
@@ -434,6 +449,42 @@ class TaskApp {
         } catch (error) {
             console.error('保存エラー:', error);
             alert('タスクの保存に失敗しました: ' + error.message);
+            return false;
+        }
+    }
+    
+    async archiveTaskToGoogleSheets(taskId) {
+        if (!this.googleSheetsConfig.webAppUrl) {
+            alert('Google Apps Script Web App URLを設定してください。');
+            return false;
+        }
+        
+        try {
+            const response = await fetch(this.googleSheetsConfig.webAppUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'archive',
+                    taskId: taskId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('タスクのアーカイブに失敗しました。');
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                return true;
+            } else {
+                throw new Error(result.error || 'アーカイブに失敗しました。');
+            }
+        } catch (error) {
+            console.error('アーカイブエラー:', error);
+            alert('タスクのアーカイブに失敗しました: ' + error.message);
             return false;
         }
     }
