@@ -6,33 +6,28 @@ class TaskApp {
         this.sortMode = 'deadline-asc';
         this.deleteTimers = new Map();
         this.googleSheetsConfig = {
-            sheetId: '',
-            apiKey: ''
+            webAppUrl: ''
         };
+        this.isLoading = false;
         
         this.init();
     }
     
-    init() {
-        this.loadFromLocalStorage();
+    async init() {
+        this.loadConfigFromLocalStorage();
         this.setupEventListeners();
         this.setTodayAsRegistrationDate();
-        this.renderAllTasks();
+        
+        // Google Sheetsからデータを読み込む
+        await this.loadFromGoogleSheets();
     }
     
-    loadFromLocalStorage() {
-        // タスクの読み込み
-        const savedTasks = localStorage.getItem('tasks');
-        if (savedTasks) {
-            this.tasks = JSON.parse(savedTasks);
-        }
-        
+    loadConfigFromLocalStorage() {
         // Google Sheets設定の読み込み
         const savedConfig = localStorage.getItem('googleSheetsConfig');
         if (savedConfig) {
             this.googleSheetsConfig = JSON.parse(savedConfig);
-            document.getElementById('sheet-id').value = this.googleSheetsConfig.sheetId || '';
-            document.getElementById('api-key').value = this.googleSheetsConfig.apiKey || '';
+            document.getElementById('web-app-url').value = this.googleSheetsConfig.webAppUrl || '';
         }
         
         // ソート設定の読み込み
@@ -43,8 +38,8 @@ class TaskApp {
         }
     }
     
-    saveToLocalStorage() {
-        localStorage.setItem('tasks', JSON.stringify(this.tasks));
+    saveConfigToLocalStorage() {
+        localStorage.setItem('googleSheetsConfig', JSON.stringify(this.googleSheetsConfig));
     }
     
     setupEventListeners() {
@@ -91,7 +86,7 @@ class TaskApp {
         return Date.now().toString(36) + Math.random().toString(36).substring(2);
     }
     
-    saveTask() {
+    async saveTask() {
         const name = document.getElementById('task-name').value.trim();
         const deadline = document.getElementById('task-deadline').value;
         const registration = document.getElementById('task-registration').value;
@@ -114,20 +109,24 @@ class TaskApp {
             details
         };
         
-        if (this.editingTaskId) {
-            // 編集
-            const index = this.tasks.findIndex(t => t.id === this.editingTaskId);
-            if (index !== -1) {
-                this.tasks[index] = task;
-            }
-        } else {
-            // 新規追加
-            this.tasks.push(task);
-        }
+        // Google Sheetsに保存
+        const success = await this.saveTaskToGoogleSheets(task);
         
-        this.saveToLocalStorage();
-        this.renderAllTasks();
-        this.clearForm();
+        if (success) {
+            if (this.editingTaskId) {
+                // 編集
+                const index = this.tasks.findIndex(t => t.id === this.editingTaskId);
+                if (index !== -1) {
+                    this.tasks[index] = task;
+                }
+            } else {
+                // 新規追加
+                this.tasks.push(task);
+            }
+            
+            this.renderAllTasks();
+            this.clearForm();
+        }
     }
     
     clearForm() {
@@ -163,14 +162,18 @@ class TaskApp {
         document.querySelector('.left-panel').scrollTo({ top: 0, behavior: 'smooth' });
     }
     
-    deleteTask(taskId) {
-        this.tasks = this.tasks.filter(t => t.id !== taskId);
-        this.saveToLocalStorage();
-        this.renderAllTasks();
+    async deleteTask(taskId) {
+        // Google Sheetsから削除
+        const success = await this.deleteTaskFromGoogleSheets(taskId);
         
-        // 編集中のタスクが削除された場合
-        if (this.editingTaskId === taskId) {
-            this.clearForm();
+        if (success) {
+            this.tasks = this.tasks.filter(t => t.id !== taskId);
+            this.renderAllTasks();
+            
+            // 編集中のタスクが削除された場合
+            if (this.editingTaskId === taskId) {
+                this.clearForm();
+            }
         }
     }
     
@@ -356,52 +359,123 @@ class TaskApp {
     }
     
     saveGoogleSheetsConfig() {
-        this.googleSheetsConfig.sheetId = document.getElementById('sheet-id').value.trim();
-        this.googleSheetsConfig.apiKey = document.getElementById('api-key').value.trim();
+        this.googleSheetsConfig.webAppUrl = document.getElementById('web-app-url').value.trim();
         
-        localStorage.setItem('googleSheetsConfig', JSON.stringify(this.googleSheetsConfig));
-        alert('Google Sheets設定を保存しました。');
+        this.saveConfigToLocalStorage();
+        alert('Google Sheets設定を保存しました。ページを再読み込みしてデータを取得します。');
+        
+        // 設定保存後にデータを読み込む
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
     }
     
-    async syncWithGoogleSheets() {
-        if (!this.googleSheetsConfig.sheetId || !this.googleSheetsConfig.apiKey) {
-            alert('Google SheetsのIDとAPIキーを設定してください。');
+    async loadFromGoogleSheets() {
+        if (!this.googleSheetsConfig.webAppUrl) {
+            console.log('Google Apps Script Web App URLが設定されていません。');
             return;
         }
         
+        if (this.isLoading) return;
+        this.isLoading = true;
+        
         try {
-            // Google Sheets APIを使用してデータを取得
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.googleSheetsConfig.sheetId}/values/A:G?key=${this.googleSheetsConfig.apiKey}`;
-            
-            const response = await fetch(url);
+            const response = await fetch(this.googleSheetsConfig.webAppUrl);
             
             if (!response.ok) {
-                throw new Error('スプレッドシートの取得に失敗しました。IDとAPIキーを確認してください。');
+                throw new Error('データの取得に失敗しました。');
             }
             
             const data = await response.json();
             
-            if (data.values && data.values.length > 1) {
-                // ヘッダー行をスキップしてタスクを読み込み
-                this.tasks = data.values.slice(1).map(row => ({
-                    id: row[0] || this.generateId(),
-                    name: row[1] || '',
-                    deadline: row[2] || '',
-                    registration: row[3] || '',
-                    important: row[4] === 'TRUE' || row[4] === 'true' || row[4] === '1',
-                    urgent: row[5] === 'TRUE' || row[5] === 'true' || row[5] === '1',
-                    details: row[6] || ''
-                })).filter(task => task.name && task.deadline);
-                
-                this.saveToLocalStorage();
+            if (data.tasks) {
+                this.tasks = data.tasks;
                 this.renderAllTasks();
-                alert('同期が完了しました。');
-            } else {
-                alert('スプレッドシートにデータがありません。');
             }
         } catch (error) {
-            console.error('同期エラー:', error);
-            alert('同期に失敗しました: ' + error.message);
+            console.error('読み込みエラー:', error);
+            alert('Google Sheetsからのデータ読み込みに失敗しました。Web App URLを確認してください。');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+    
+    async saveTaskToGoogleSheets(task) {
+        if (!this.googleSheetsConfig.webAppUrl) {
+            alert('Google Apps Script Web App URLを設定してください。');
+            return false;
+        }
+        
+        try {
+            const response = await fetch(this.googleSheetsConfig.webAppUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'save',
+                    task: task
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('タスクの保存に失敗しました。');
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                return true;
+            } else {
+                throw new Error(result.error || '保存に失敗しました。');
+            }
+        } catch (error) {
+            console.error('保存エラー:', error);
+            alert('タスクの保存に失敗しました: ' + error.message);
+            return false;
+        }
+    }
+    
+    async deleteTaskFromGoogleSheets(taskId) {
+        if (!this.googleSheetsConfig.webAppUrl) {
+            alert('Google Apps Script Web App URLを設定してください。');
+            return false;
+        }
+        
+        try {
+            const response = await fetch(this.googleSheetsConfig.webAppUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'delete',
+                    taskId: taskId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('タスクの削除に失敗しました。');
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                return true;
+            } else {
+                throw new Error(result.error || '削除に失敗しました。');
+            }
+        } catch (error) {
+            console.error('削除エラー:', error);
+            alert('タスクの削除に失敗しました: ' + error.message);
+            return false;
+        }
+    }
+    
+    async syncWithGoogleSheets() {
+        await this.loadFromGoogleSheets();
+        if (this.tasks.length > 0) {
+            alert('同期が完了しました。');
         }
     }
 }
