@@ -49,8 +49,9 @@ A web application for task management using the Eisenhower Matrix.
   - カード（チェックボックス以外）をクリックで編集画面に移動
 
 ### データ管理
-- ローカルストレージに自動保存
-- Google Sheets連携（オプション）
+- Google Sheetsをデータベースとして使用
+- マルチデバイス対応（どのデバイスからも同じデータにアクセス可能）
+- リアルタイム同期（タスクの追加・編集・削除が即座に反映）
 
 ## 使い方
 
@@ -73,35 +74,38 @@ A web application for task management using the Eisenhower Matrix.
 2. 3秒間待つと自動的に削除される
 3. 3秒以内にチェックを外すとキャンセル可能
 
-### Google Sheets連携（オプション）
+### Google Sheets連携（必須）
+
+このアプリはGoogle Sheetsをバックエンドデータベースとして使用します。複数のデバイスから同じタスクデータにアクセスできます。
 
 #### 前提条件
-1. Google Cloud Platformでプロジェクトを作成
-2. Google Sheets APIを有効化
-3. APIキーを作成
-4. スプレッドシートを作成し、共有設定を「リンクを知っている全員」に設定
+1. Googleアカウント
+2. Google Sheets
+3. Google Apps Script（無料）
 
-#### スプレッドシートの形式
-以下の列でデータを作成してください：
+#### セットアップ手順
 
-| A列 | B列 | C列 | D列 | E列 | F列 | G列 |
-|-----|-----|-----|-----|-----|-----|-----|
-| ID | タスク名 | 期限 | 登録日 | 重要 | 緊急 | 詳細 |
-| task1 | 会議準備 | 2025-01-05 | 2025-01-01 | TRUE | TRUE | 資料作成 |
+詳細は [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) を参照してください。
 
-#### 設定手順
-1. 左パネル下部の「Google Sheets設定」セクションを開く
-2. スプレッドシートIDを入力（URLの`/d/`と`/edit`の間の文字列）
-3. Google Sheets APIキーを入力
-4. 「設定を保存」をクリック
-5. 「同期」ボタンでデータを読み込み
+**簡易手順**:
+1. Google Sheetsで新しいスプレッドシートを作成
+2. 「拡張機能」→「Apps Script」を選択
+3. `google-apps-script.js` の内容をコピー＆ペースト
+4. 「デプロイ」→「新しいデプロイ」→「ウェブアプリ」として設定
+   - 次のユーザーとして実行: 自分
+   - アクセスできるユーザー: 全員
+5. デプロイされたWeb App URLをコピー
+6. タスク管理アプリの「Google Sheets設定」にURLを貼り付け
+7. 「設定を保存」をクリック
+
+これで、どのデバイスからアクセスしても同じタスクが表示されます。
 
 ## 技術仕様
 - HTML5
 - CSS3（Flexbox、Grid Layout）
-- Vanilla JavaScript（ES6+）
-- ローカルストレージ
-- Google Sheets API（オプション）
+- Vanilla JavaScript（ES6+、Async/Await）
+- Google Sheets（データベース）
+- Google Apps Script（バックエンドAPI）
 
 ## ブラウザ対応
 - Chrome（推奨）
