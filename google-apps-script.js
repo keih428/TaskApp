@@ -35,8 +35,8 @@ function doGet(e) {
       name: row[1],
       deadline: row[2],
       registration: row[3],
-      important: row[4] === true || row[4] === 'TRUE' || row[4] === true,
-      urgent: row[5] === true || row[5] === 'TRUE' || row[5] === true,
+      important: row[4] === true || row[4] === 'TRUE' || row[4] === 'true',
+      urgent: row[5] === true || row[5] === 'TRUE' || row[5] === 'true',
       details: row[6] || ''
     })).filter(task => task.id && task.name && task.deadline);
     
@@ -160,6 +160,8 @@ function getOrCreateSheet() {
 
 /**
  * JSON レスポンスの作成
+ * Note: Google Apps Script Web Apps don't support custom HTTP status codes
+ * The statusCode parameter is kept for consistency but not used
  */
 function createJsonResponse(data, statusCode = 200) {
   const output = ContentService.createTextOutput(JSON.stringify(data));

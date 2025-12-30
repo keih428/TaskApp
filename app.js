@@ -359,6 +359,8 @@ class TaskApp {
     }
     
     saveGoogleSheetsConfig() {
+        const CONFIG_SAVE_RELOAD_DELAY = 1000; // 1秒後にリロード
+        
         this.googleSheetsConfig.webAppUrl = document.getElementById('web-app-url').value.trim();
         
         this.saveConfigToLocalStorage();
@@ -367,7 +369,7 @@ class TaskApp {
         // 設定保存後にデータを読み込む
         setTimeout(() => {
             location.reload();
-        }, 1000);
+        }, CONFIG_SAVE_RELOAD_DELAY);
     }
     
     async loadFromGoogleSheets() {
